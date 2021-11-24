@@ -1,0 +1,9 @@
+{
+	"Vantage": {
+		"Workflows": {
+			"create_subclip":"<UUID>"
+		},
+		"Address": "http://IP:PORT",
+		"DryRun": false
+	}
+}

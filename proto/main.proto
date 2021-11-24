@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option go_package = "github.com/bcc-code/mediabank-bridge/proto";
+
+package proto;
+
+service MediabankBridge {
+  rpc CreateSubclip (CreateSubclipRequest) returns (CreateSubclipResponse) {}
+}
+
+message CreateSubclipRequest {
+  string assetId = 1;
+  string in = 2;
+  string out = 3;
+}
+
+message CreateSubclipResponse {
+  string message = 1;
+}
+
