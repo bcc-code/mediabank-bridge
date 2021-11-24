@@ -97,5 +97,5 @@ var MediabankBridge_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "main.proto",
+	Metadata: "proto/main.proto",
 }
