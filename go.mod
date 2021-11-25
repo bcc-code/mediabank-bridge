@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/ansel1/merry/v2 v2.0.0-beta.12
-	github.com/davecgh/go-spew v1.1.1
 	github.com/imroc/req v0.3.2
 	github.com/rs/zerolog v1.26.0
 	google.golang.org/grpc v1.42.0

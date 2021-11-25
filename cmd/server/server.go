@@ -5,8 +5,6 @@ import (
 
 	"github.com/bcc-code/mediabank-bridge/proto"
 	"github.com/bcc-code/mediabank-bridge/vantage"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 // Server implements all GRPC calls
@@ -18,7 +16,12 @@ type Server struct {
 
 // CreateSubclip from the specified ID
 func (s Server) CreateSubclip(ctx context.Context, req *proto.CreateSubclipRequest) (*proto.CreateSubclipResponse, error) {
-	spew.Dump(req)
-	err := s.vantageClient.CreateSubclip()
+	err := s.vantageClient.CreateSubclip(vantage.CreateSubclipParams{
+		In:      req.In,
+		Out:     req.Out,
+		AssetID: req.AssetId,
+		Title:   req.Title,
+	})
+
 	return &proto.CreateSubclipResponse{}, err
 }

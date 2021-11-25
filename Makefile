@@ -1,4 +1,6 @@
-.PHONY: proto
+.PHONY: proto build
+
+all: build
 
 proto: proto/main.pb.go
 
@@ -7,7 +9,8 @@ proto/%.pb.go: proto/%.proto
 		--go-grpc_out=./ --go-grpc_opt=paths=source_relative \
 		$^
 
-binary: bin/mediabankbridge-linux-amd64 proto/*.pb.go
+build: proto
+	env GOOS=linux GOARCH=amd64 go build -o ./bin/mediabankbridge-linux-amd64 ./cmd/server
 
-bin/%: **/*.go proto/*.proto
-	env GOOS=linux GOARCH=amd64 go build -o $@ .
+clean:
+	rm -v ./bin/mediabankbridge-linux-amd64

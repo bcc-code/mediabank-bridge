@@ -12,6 +12,7 @@ message CreateSubclipRequest {
   string assetId = 1;
   string in = 2;
   string out = 3;
+  string title = 4;
 }
 
 message CreateSubclipResponse {

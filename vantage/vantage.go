@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ansel1/merry/v2"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/bcc-code/mediabank-bridge/log"
 	"github.com/imroc/req"
 )
 
@@ -59,25 +59,26 @@ func (c Client) makeURI(action, path string) string {
 // StartWorkflow with specified params
 func (c Client) StartWorkflow(wID workflowID, data interface{}) error {
 	uri := c.makeURI("Workflows", fmt.Sprintf("%s/Submit", wID))
-	req.Post(uri, req.BodyJSON(data))
-	return nil
+	res, err := req.Post(uri, req.BodyJSON(data))
+	log.L.Debug().Str("return body", res.String()).Msg("Return value from vantage")
+	return err
 }
 
-func (c Client) getVariablesForWOrkflow(wName workflowName) error {
+func (c Client) getVariablesForWOrkflow(wName workflowName) (map[workflowParamName]*vantageWorkflowVariable, error) {
 	// http://XXXX/Rest/Workflows/{ID}/JobInputs
 	uri := c.makeURI("Workflows", fmt.Sprintf("%s/JobInputs", c.workflows[wName]))
 	println(uri)
 	res, err := req.Get(uri)
 	if err != nil {
-		return merry.Wrap(err)
+		return nil, merry.Wrap(err)
 	}
 
 	data := subclipRequest{}
 	if err := res.ToJSON(&data); err != nil {
-		return err
+		return nil, merry.Wrap(err)
 	}
 
-	params := []vantageWorkflowVariable{}
+	params := map[workflowParamName]*vantageWorkflowVariable{}
 
 	for _, n := range workflowParamNames[wName] {
 		found := false
@@ -85,77 +86,60 @@ func (c Client) getVariablesForWOrkflow(wName workflowName) error {
 			if v.Name != n {
 				continue
 			}
-			params = append(params, v)
+			params[n] = &v
 			found = true
 			break
 		}
 
 		if !found {
-			return merry.Errorf("Unable to find variable %s", n)
+			return nil, merry.Errorf("Unable to find variable %s", n)
 		}
 	}
 
-	spew.Dump(params)
-	return nil
+	return params, nil
 }
 
-func (c Client) CreateSubclip() error {
+func mapToList(m map[workflowParamName]*vantageWorkflowVariable) []vantageWorkflowVariable {
+	l := make([]vantageWorkflowVariable, len(m))
+	i := 0
+	for _, v := range m {
+		l[i] = *v
+		i++
+	}
+	return l
+}
 
-	return c.getVariablesForWOrkflow(workflowCreateSubclip)
+// CreateSubclipParams to be passed to the workflow
+type CreateSubclipParams struct {
+	In      string
+	Out     string
+	AssetID string
+	Title   string
+}
 
-	/*
-		data := subclipRequest{
-			Attachments: []string{},
-			JobName:     "Test job 1",
-			Labels:      []string{},
-			Medias:      []string{},
-			Variables:   []vantageWorkflowVariable{},
-		}
+// ToWorkflowParams fills the Vantage style params
+func (p CreateSubclipParams) ToWorkflowParams(tpl map[workflowParamName]*vantageWorkflowVariable) []vantageWorkflowVariable {
+	tpl[paramStartSamples].Value = p.In
+	tpl[paramEndSamples].Value = p.Out
+	tpl[paramSubclipTitle].Value = p.Title
+	tpl[paramAPIAssetID].Value = p.AssetID
+	return mapToList(tpl)
+}
 
-		c.StartWorkflow("asd", data)
+// CreateSubclip on the specified asset ID
+func (c Client) CreateSubclip(in CreateSubclipParams) error {
+	paramsTemplate, err := c.getVariablesForWOrkflow(workflowCreateSubclip)
+	if err != nil {
+		return err
+	}
 
-		return nil
+	data := subclipRequest{
+		Attachments: []string{},
+		JobName:     fmt.Sprintf("Create subclip - %s - %s", in.AssetID, in.Title),
+		Labels:      []string{},
+		Medias:      []string{},
+		Variables:   in.ToWorkflowParams(paramsTemplate),
+	}
 
-		/*
-			{
-			    "Attachments": [],
-			    "JobName": "Populate with your job name",
-			    "Labels": [],
-			    "Medias": [],
-			    "Priority": 0,
-			    "Variables": [
-			        {
-			            "Identifier": "8eeac8c9-b3fd-4437-9f2c-1e342d0f14b8",
-			            "DefaultValue": "0",
-			            "Description": "",
-			            "Name": "VS Subclip TC End Samples INT",
-			            "TypeCode": "Int32",
-			            "Value": "0"
-			        },
-			        {
-			            "Identifier": "e6c77eb8-8c46-435d-b471-66ddf6be9efe",
-			            "DefaultValue": "0",
-			            "Description": "",
-			            "Name": "VS Subclip TC Start Samples INT",
-			            "TypeCode": "Int32",
-			            "Value": "0"
-			        },
-			        {
-			            "Identifier": "ce3aac9f-0f3b-4731-ab5b-0da9f6e0dacd",
-			            "DefaultValue": "false",
-			            "Description": "",
-			            "Name": "VS API Subclip Title",
-			            "TypeCode": "String",
-			            "Value": "false"
-			        },
-			        {
-			            "Identifier": "82f0f6fb-07da-45d1-912c-36ff3afb4878",
-			            "DefaultValue": "False",
-			            "Description": "",
-			            "Name": "VS API Asset ID",
-			            "TypeCode": "String",
-			            "Value": "PLACEHOLDER1"
-			        }
-			    ]
-			}*/
+	return c.StartWorkflow(c.workflows[workflowCreateSubclip], data)
 }
