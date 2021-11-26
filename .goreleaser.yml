@@ -1,0 +1,9 @@
+builds:
+  - main: ./cmd/server
+    id: "server"
+    binary: mediabank-bridge-server
+    targets:
+      - linux_amd64
+release:
+  prerelease: auto
+
