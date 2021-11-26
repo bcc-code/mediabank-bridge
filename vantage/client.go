@@ -20,22 +20,6 @@ type Client struct {
 	workflows   WorkflowMap
 }
 
-// ClientSettings to be passed into NewClient()
-type ClientSettings struct {
-	Address   string
-	DryRun    bool
-	Workflows WorkflowMap
-}
-
-// Validate that the settings make some basic sense
-func (cs ClientSettings) Validate() error {
-	if cs.Address == "" {
-		return merry.Wrap(ErrAddressEmpty)
-	}
-
-	return cs.Workflows.Validate()
-}
-
 // NewClient with specified settings
 func NewClient(s ClientSettings) (*Client, error) {
 	if err := s.Validate(); err != nil {
@@ -97,16 +81,6 @@ func (c Client) getVariablesForWOrkflow(wName workflowName) (map[workflowParamNa
 	}
 
 	return params, nil
-}
-
-func mapToList(m map[workflowParamName]*vantageWorkflowVariable) []vantageWorkflowVariable {
-	l := make([]vantageWorkflowVariable, len(m))
-	i := 0
-	for _, v := range m {
-		l[i] = *v
-		i++
-	}
-	return l
 }
 
 // CreateSubclipParams to be passed to the workflow

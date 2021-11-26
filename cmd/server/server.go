@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/bcc-code/mediabank-bridge/log"
 	"github.com/bcc-code/mediabank-bridge/proto"
 	"github.com/bcc-code/mediabank-bridge/vantage"
 )
@@ -16,6 +17,7 @@ type Server struct {
 
 // CreateSubclip from the specified ID
 func (s Server) CreateSubclip(ctx context.Context, req *proto.CreateSubclipRequest) (*proto.CreateSubclipResponse, error) {
+	log.L.Debug().Msg("CreateSubclip")
 	err := s.vantageClient.CreateSubclip(vantage.CreateSubclipParams{
 		In:      req.In,
 		Out:     req.Out,
@@ -23,5 +25,9 @@ func (s Server) CreateSubclip(ctx context.Context, req *proto.CreateSubclipReque
 		Title:   req.Title,
 	})
 
-	return &proto.CreateSubclipResponse{}, err
+	log.L.Debug().Err(err)
+
+	return &proto.CreateSubclipResponse{
+		Message: "X",
+	}, nil
 }

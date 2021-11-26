@@ -2,26 +2,55 @@ package main
 
 //asldkjalskdlkasjd
 import (
-	"encoding/json"
-	"errors"
+	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 
+	"github.com/bcc-code/mediabank-bridge/auth0"
+	"github.com/bcc-code/mediabank-bridge/config"
 	"github.com/bcc-code/mediabank-bridge/log"
 	"github.com/bcc-code/mediabank-bridge/proto"
 	"github.com/bcc-code/mediabank-bridge/vantage"
 
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
-var defaultConfigPaths = []string{
-	"~/.config/mediabank-bridge/config.json",
-	".config.json",
-	"config.json",
+// Authorization unary interceptor function to handle authorize per RPC call
+func serverInterceptor(ctx context.Context,
+	req interface{},
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (interface{}, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Failed to get metadata")
+	}
+
+	authHeader, ok := md["token"]
+	if !ok {
+		return nil, status.Errorf(codes.Unauthenticated, "missing token")
+	}
+
+	token := authHeader[0]
+
+	err := auth0.ValidateJWT(token, auth0.JWTConfig{
+		Audience: "media.bcc.mediabanken",
+		Issuer:   "https://login.bcc.no/",
+		Domain:   "login.bcc.no",
+	})
+
+	if err != nil {
+		log.L.Info().Err(err).Msg("Auth failed")
+		return nil, status.Errorf(codes.Unauthenticated, err.Error())
+	}
+
+	return handler(ctx, req)
 }
 
 func main() {
@@ -32,9 +61,8 @@ func main() {
 	if port == "" {
 		port = "8083"
 	}
-
 	configFile := os.Getenv("CONF_FILE")
-	conf := MustReadConfigFile(configFile)
+	conf := config.MustReadConfigFile(configFile)
 
 	vantageClient, err := vantage.NewClient(conf.Vantage)
 
@@ -50,7 +78,7 @@ func main() {
 			Msgf("failed to listen")
 	}
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.UnaryInterceptor(serverInterceptor))
 	reflection.Register(s) // This is needed for using most debug UIs
 
 	proto.RegisterMediabankBridgeServer(s, &Server{
@@ -65,62 +93,4 @@ func main() {
 			Err(err).
 			Msgf("failed to serve")
 	}
-}
-
-// Config structure for the app read from a JSON file
-type Config struct {
-	Vantage vantage.ClientSettings
-}
-
-// Validate if all parts of the config are ok
-func (c Config) Validate() error {
-	return c.Vantage.Validate()
-}
-
-// MustReadConfigFile either from the passed path or from one of the default locations
-func MustReadConfigFile(filePath string) Config {
-	if filePath != "" {
-		if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
-			log.L.Fatal().
-				Str("filePath", filePath).
-				Msg("Specified config file does not exist. Did *not* attempt to look in default locations")
-		}
-	} else {
-		for _, fp := range defaultConfigPaths {
-			log.L.Debug().Str("filePath", fp).Msg("Looking for config file")
-			if _, err := os.Stat(fp); errors.Is(err, os.ErrNotExist) {
-				continue
-			}
-			filePath = fp
-			break
-		}
-	}
-
-	if filePath == "" {
-		log.L.Fatal().
-			Msg("Unable to find config in any paths")
-	}
-
-	fp, err := os.Open(filePath)
-	if err != nil {
-		log.L.Fatal().Err(err)
-	}
-
-	byteValue, err := ioutil.ReadAll(fp)
-	if err != nil {
-		log.L.Fatal().Err(err)
-	}
-
-	cfg := Config{}
-	err = json.Unmarshal(byteValue, &cfg)
-	if err != nil {
-		log.L.Fatal().Err(err)
-	}
-
-	err = cfg.Validate()
-	if err != nil {
-		log.L.Fatal().Err(err)
-	}
-
-	return cfg
 }
