@@ -8,6 +8,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/imroc/req v0.3.2
+	github.com/lestrrat-go/jwx v1.2.11
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rs/zerolog v1.26.0
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
@@ -26,7 +27,6 @@ require (
 	github.com/lestrrat-go/blackmagic v1.0.0 // indirect
 	github.com/lestrrat-go/httpcc v1.0.0 // indirect
 	github.com/lestrrat-go/iter v1.0.1 // indirect
-	github.com/lestrrat-go/jwx v1.2.11 // indirect
 	github.com/lestrrat-go/option v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20201217014255-9d1352758620 // indirect
 )

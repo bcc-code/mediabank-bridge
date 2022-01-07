@@ -2,6 +2,7 @@ package proto
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,6 +14,8 @@ import (
 	"github.com/ansel1/merry/v2"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog"
+	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 const audience = "media.bcc.mediabanken"
@@ -32,9 +35,31 @@ type credentialsProvider struct {
 	log          zerolog.Logger
 }
 
-// NewCredentialsProvider for this api
-func NewCredentialsProvider(clientID, clientSecret string, logger *zerolog.Logger) (*credentialsProvider, error) {
+// NewClient returns fully functional client, including all needed authentication etc providers
+func NewClient(
+	ctx context.Context,
+	endpoint, clientID, clientSecret string,
+	logger *zerolog.Logger,
+	insecure bool, // Used for local debug purposes
+) (MediabankBridgeClient, error) {
 	log := logger.With().Str("package", "mediabank-bridge/proto").Logger()
+	provider, err := newCredentialsProvider(clientID, clientSecret, log)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := grpc.DialContext(ctx, endpoint, grpc.WithPerRPCCredentials(provider), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+	if err != nil {
+		return nil, err
+	}
+
+	client := NewMediabankBridgeClient(conn)
+	return client, nil
+}
+
+// NewCredentialsProvider for this api
+func newCredentialsProvider(clientID, clientSecret string, log zerolog.Logger) (*credentialsProvider, error) {
+	log.Debug().Msg("called NewCredentialsProvider")
 	p := &credentialsProvider{
 		clientID:     clientID,
 		clientSecret: clientSecret,
