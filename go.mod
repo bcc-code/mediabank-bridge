@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/ansel1/merry/v2 v2.0.0-beta.12
-	github.com/bcc-code/mediabank-bridge/proto v0.0.0-00010101000000-000000000000
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/imroc/req v0.3.2
@@ -30,5 +29,3 @@ require (
 	github.com/lestrrat-go/option v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20201217014255-9d1352758620 // indirect
 )
-
-replace github.com/bcc-code/mediabank-bridge/proto => ./proto
